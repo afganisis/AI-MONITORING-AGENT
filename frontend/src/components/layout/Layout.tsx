@@ -11,6 +11,7 @@ import {
   Zap,
   Bell,
   Building2,
+  TrendingUp,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -27,6 +28,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Control', path: '/', icon: Bot },
   { label: 'Activity', path: '/activity', icon: Activity },
+  { label: 'Results', path: '/results', icon: TrendingUp },
 ];
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {

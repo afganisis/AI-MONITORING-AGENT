@@ -26,7 +26,10 @@
       "Bash(timeout /t 5)",
       "Bash(powershell -Command:*)",
       "Bash(sqlite3:*)",
-      "Bash(del aiagent.db)"
+      "Bash(del aiagent.db)",
+      "Bash(git check-ignore:*)",
+      "Bash(..backendvenvScriptspython.exe -m pip install winloop)",
+      "Bash(venvScriptspython.exe -m pip install winloop)"
     ]
   }
 }
