@@ -10,7 +10,7 @@ interface MetricCardProps {
     value: number;
     isPositive: boolean;
   };
-  color?: 'cyan' | 'green' | 'red' | 'orange' | 'purple';
+  color?: 'cyan' | 'green' | 'red' | 'orange' | 'yellow' | 'purple';
   subtitle?: string;
 }
 
@@ -46,6 +46,12 @@ export const MetricCard: React.FC<MetricCardProps> = ({
       iconBorder: 'border-ai-warning/30',
       iconColor: 'text-ai-warning',
       valueBg: 'from-ai-warning/20',
+    },
+    yellow: {
+      iconBg: 'bg-yellow-500/10',
+      iconBorder: 'border-yellow-500/30',
+      iconColor: 'text-yellow-400',
+      valueBg: 'from-yellow-500/20',
     },
     purple: {
       iconBg: 'bg-neon-purple/10',
