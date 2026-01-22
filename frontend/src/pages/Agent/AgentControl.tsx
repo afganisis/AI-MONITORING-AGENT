@@ -1,44 +1,92 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader } from '@/components/common/Card';
 import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
 import { Play, Pause, StopCircle, Settings, AlertTriangle } from 'lucide-react';
-import { mockAgentConfig } from '@/data/mockData';
 import { AgentState } from '@/types';
 import { getAgentStateColor } from '@/utils/format';
 
+const defaultConfig = {
+  state: 'stopped',
+  polling_interval_seconds: 300,
+  max_concurrent_fixes: 1,
+  require_approval: false,
+  dry_run_mode: false,
+};
+
 export const AgentControl: React.FC = () => {
-  const [config, setConfig] = useState(mockAgentConfig);
+  const [config, setConfig] = useState(defaultConfig);
   const [isUpdating, setIsUpdating] = useState(false);
+
+  useEffect(() => {
+    fetchConfig();
+    const interval = setInterval(fetchConfig, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchConfig = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/api/agent/status');
+      if (response.ok) {
+        const data = await response.json();
+        setConfig(data);
+      }
+    } catch (error) {
+      console.error('Error fetching agent config:', error);
+    }
+  };
 
   const handleStart = async () => {
     if (confirm('Start the AI Agent? It will begin monitoring and proposing fixes.')) {
       setIsUpdating(true);
-      // API call would go here
-      setTimeout(() => {
-        setConfig({ ...config, state: 'running' });
+      try {
+        const response = await fetch('http://localhost:8000/api/agent/start', {
+          method: 'POST',
+        });
+        if (response.ok) {
+          await fetchConfig();
+        }
+      } catch (error) {
+        console.error('Error starting agent:', error);
+      } finally {
         setIsUpdating(false);
-      }, 1000);
+      }
     }
   };
 
   const handleStop = async () => {
     if (confirm('Stop the AI Agent? Active operations will be completed first.')) {
       setIsUpdating(true);
-      setTimeout(() => {
-        setConfig({ ...config, state: 'stopped' });
+      try {
+        const response = await fetch('http://localhost:8000/api/agent/stop', {
+          method: 'POST',
+        });
+        if (response.ok) {
+          await fetchConfig();
+        }
+      } catch (error) {
+        console.error('Error stopping agent:', error);
+      } finally {
         setIsUpdating(false);
-      }, 1000);
+      }
     }
   };
 
   const handlePause = async () => {
     if (confirm('Pause the AI Agent? Monitoring continues but no fixes will be proposed.')) {
       setIsUpdating(true);
-      setTimeout(() => {
-        setConfig({ ...config, state: 'paused' });
+      try {
+        const response = await fetch('http://localhost:8000/api/agent/pause', {
+          method: 'POST',
+        });
+        if (response.ok) {
+          await fetchConfig();
+        }
+      } catch (error) {
+        console.error('Error pausing agent:', error);
+      } finally {
         setIsUpdating(false);
-      }, 1000);
+      }
     }
   };
 

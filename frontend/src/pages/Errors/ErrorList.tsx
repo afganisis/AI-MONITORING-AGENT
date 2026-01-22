@@ -1,17 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/common/Card';
 import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
-import { Search, Filter, Download, RefreshCw } from 'lucide-react';
-import { mockErrors } from '@/data/mockData';
+import { Search, Filter, Download, RefreshCw, Loader2 } from 'lucide-react';
 import { ErrorRecord, ErrorStatus, ErrorSeverity } from '@/types';
 import { formatDate, formatRelativeTime, getSeverityColor, getStatusColor } from '@/utils/format';
 
 export const ErrorList: React.FC = () => {
-  const [errors, setErrors] = useState<ErrorRecord[]>(mockErrors);
+  const [errors, setErrors] = useState<ErrorRecord[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSeverities, setSelectedSeverities] = useState<ErrorSeverity[]>([]);
   const [selectedStatuses, setSelectedStatuses] = useState<ErrorStatus[]>([]);
+
+  useEffect(() => {
+    fetchErrors();
+  }, []);
+
+  const fetchErrors = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:8000/api/errors?limit=100&offset=0');
+      if (response.ok) {
+        const data = await response.json();
+        setErrors(data.errors || []);
+      }
+    } catch (error) {
+      console.error('Error fetching errors:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredErrors = errors.filter((error) => {
     const matchesSearch =
@@ -60,8 +79,8 @@ export const ErrorList: React.FC = () => {
 
           {/* Action Buttons */}
           <div className="flex items-center space-x-3">
-            <Button variant="ghost" size="sm">
-              <RefreshCw className="w-4 h-4 mr-2" />
+            <Button variant="ghost" size="sm" onClick={fetchErrors} disabled={loading}>
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
             <Button variant="ghost" size="sm">
@@ -181,7 +200,14 @@ export const ErrorList: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredErrors.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center">
+                    <Loader2 className="w-8 h-8 animate-spin text-cyan-500 mx-auto" />
+                    <p className="text-gray-500 mt-2">Loading errors...</p>
+                  </td>
+                </tr>
+              ) : filteredErrors.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
                     <div className="flex flex-col items-center">

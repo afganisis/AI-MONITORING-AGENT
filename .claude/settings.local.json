@@ -1,7 +1,32 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(python:*)",
+      "Bash(pip install:*)",
+      "Bash(dir:*)",
+      "Bash(if exist zeroeld rmdir /s /q zeroeld)",
+      "Bash(if exist mockData.ts del /q mockData.ts)",
+      "Bash(playwright install:*)",
+      "Bash(timeout /t 5 /nobreak)",
+      "Bash(curl:*)",
+      "Bash(uvicorn:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(cd:*)",
+      "Bash(python3:*)",
+      "Bash(./venv/Scripts/pip.exe install:*)",
+      "Bash(ls:*)",
+      "Bash(powershell -Command \"Stop-Process -Id 2708 -Force; Stop-Process -Id 25144 -Force\")",
+      "Bash(tasklist:*)",
+      "Bash(npm run dev:*)",
+      "Bash(timeout /t 5)",
+      "Bash(powershell -Command:*)",
+      "Bash(sqlite3:*)",
+      "Bash(del aiagent.db)"
     ]
   }
 }
