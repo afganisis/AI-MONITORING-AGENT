@@ -29,7 +29,13 @@
       "Bash(del aiagent.db)",
       "Bash(git check-ignore:*)",
       "Bash(..backendvenvScriptspython.exe -m pip install winloop)",
-      "Bash(venvScriptspython.exe -m pip install winloop)"
+      "Bash(venvScriptspython.exe -m pip install winloop)",
+      "Bash(tree:*)",
+      "Bash(for f in app/**/*.py)",
+      "Bash(do python -m py_compile \"$f\")",
+      "Bash(done)",
+      "Bash(grep:*)",
+      "Bash(npm run lint:*)"
     ]
   }
 }

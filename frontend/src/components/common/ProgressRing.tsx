@@ -22,11 +22,11 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
   const offset = circumference - (progress / 100) * circumference;
 
   const colors = {
-    cyan: { stroke: '#00f5ff', glow: 'drop-shadow(0 0 6px #00f5ff)' },
-    green: { stroke: '#00ff88', glow: 'drop-shadow(0 0 6px #00ff88)' },
-    red: { stroke: '#ff0055', glow: 'drop-shadow(0 0 6px #ff0055)' },
-    purple: { stroke: '#bf00ff', glow: 'drop-shadow(0 0 6px #bf00ff)' },
-    orange: { stroke: '#ff8800', glow: 'drop-shadow(0 0 6px #ff8800)' },
+    cyan: { stroke: '#0ea5e9', glow: 'drop-shadow(0 0 4px rgba(14, 165, 233, 0.3))' },
+    green: { stroke: '#10b981', glow: 'drop-shadow(0 0 4px rgba(16, 185, 129, 0.3))' },
+    red: { stroke: '#ef4444', glow: 'drop-shadow(0 0 4px rgba(239, 68, 68, 0.3))' },
+    purple: { stroke: '#8b5cf6', glow: 'drop-shadow(0 0 4px rgba(139, 92, 246, 0.3))' },
+    orange: { stroke: '#f97316', glow: 'drop-shadow(0 0 4px rgba(249, 115, 22, 0.3))' },
   };
 
   const c = colors[color];
@@ -63,12 +63,12 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
       {/* Center content */}
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         {showPercentage && (
-          <span className="text-2xl font-cyber font-bold" style={{ color: c.stroke }}>
+          <span className="text-2xl font-semibold" style={{ color: c.stroke }}>
             {Math.round(progress)}%
           </span>
         )}
         {label && (
-          <span className="text-xs font-mono text-gray-400 mt-1">{label}</span>
+          <span className="text-xs text-gray-400 mt-1">{label}</span>
         )}
       </div>
     </div>

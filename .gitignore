@@ -37,6 +37,7 @@ backend/.env
 *.log
 logs/
 screenshots/
+logs_data/
 
 # Playwright
 playwright_data/

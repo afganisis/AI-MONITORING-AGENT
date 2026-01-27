@@ -53,43 +53,37 @@ export const AIStatusIndicator: React.FC<AIStatusIndicatorProps> = ({
 
   return (
     <div className="relative flex items-center justify-center">
-      {/* Outer ring with rotation */}
+      {/* Outer ring with subtle rotation */}
       <div
         className={`
-          absolute ${s.outer} rounded-full border-2 ${config.outerColor}
-          ${config.animate ? 'animate-spin-slow' : ''}
+          absolute ${s.outer} rounded-full border ${config.outerColor}
+          ${config.animate ? 'animate-spin-slow opacity-40' : 'opacity-30'}
         `}
       >
-        {/* Segment indicators */}
-        <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full ${config.innerColor}`} />
-        <div className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full ${config.innerColor} opacity-50`} />
-        <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full ${config.innerColor} opacity-30`} />
-        <div className={`absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full ${config.innerColor} opacity-30`} />
+        {/* Segment indicators - more subtle */}
+        <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full ${config.innerColor}`} />
+        <div className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full ${config.innerColor} opacity-50`} />
+        <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full ${config.innerColor} opacity-30`} />
+        <div className={`absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full ${config.innerColor} opacity-30`} />
       </div>
 
       {/* Inner circle */}
       <div
         className={`
-          ${s.inner} rounded-full ${config.innerColor} ${config.glowColor}
+          ${s.inner} rounded-full ${config.innerColor}
           flex items-center justify-center
-          ${config.animate ? 'animate-pulse-slow' : ''}
+          transition-all duration-300
         `}
       >
-        <Icon className={`${s.icon} text-cyber-900`} />
+        <Icon className={`${s.icon} text-white`} />
       </div>
 
-      {/* Pulse rings */}
+      {/* Subtle pulse ring */}
       {config.animate && (
-        <>
-          <div
-            className={`absolute ${s.outer} rounded-full border ${config.outerColor} animate-ping opacity-30`}
-            style={{ animationDuration: '2s' }}
-          />
-          <div
-            className={`absolute ${s.outer} rounded-full border ${config.outerColor} animate-ping opacity-20`}
-            style={{ animationDuration: '3s', animationDelay: '0.5s' }}
-          />
-        </>
+        <div
+          className={`absolute ${s.outer} rounded-full border ${config.outerColor} animate-ping opacity-20`}
+          style={{ animationDuration: '2s' }}
+        />
       )}
     </div>
   );

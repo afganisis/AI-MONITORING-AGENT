@@ -48,6 +48,7 @@ export const Results: React.FC = () => {
   const [results, setResults] = useState<ErrorByDriver[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [expandedDrivers, setExpandedDrivers] = useState<Set<string>>(new Set());
 
   const fetchResults = async () => {
     try {
@@ -88,6 +89,18 @@ export const Results: React.FC = () => {
       failed: 'text-red-400',
     };
     return colors[status as keyof typeof colors] || 'text-gray-400';
+  };
+
+  const toggleDriverExpansion = (driverId: string) => {
+    setExpandedDrivers((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(driverId)) {
+        newSet.delete(driverId);
+      } else {
+        newSet.add(driverId);
+      }
+      return newSet;
+    });
   };
 
   if (loading) {
@@ -223,9 +236,26 @@ export const Results: React.FC = () => {
               {/* Recent Errors */}
               {driver.recent_errors.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-300 mb-3">Последние ошибки</h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-gray-300">Последние ошибки</h3>
+                    {driver.recent_errors.length > 5 && (
+                      <Button
+                        onClick={() => toggleDriverExpansion(driver.driver_id)}
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs"
+                      >
+                        {expandedDrivers.has(driver.driver_id)
+                          ? `Скрыть (${driver.recent_errors.length - 5} ещё)`
+                          : `Показать все (${driver.recent_errors.length})`}
+                      </Button>
+                    )}
+                  </div>
                   <div className="space-y-2">
-                    {driver.recent_errors.slice(0, 5).map((error) => (
+                    {(expandedDrivers.has(driver.driver_id)
+                      ? driver.recent_errors
+                      : driver.recent_errors.slice(0, 5)
+                    ).map((error) => (
                       <div
                         key={error.id}
                         className={`p-3 rounded-lg border ${getSeverityColor(error.severity)}`}

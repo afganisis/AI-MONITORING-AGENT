@@ -8,32 +8,32 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Основной фон - глубокий темный
+        // Professional dark backgrounds - more muted
         cyber: {
-          900: '#0a0a0f',
-          800: '#0d0d14',
-          700: '#12121a',
-          600: '#1a1a24',
-          500: '#24242f',
+          900: '#0a0e1a',
+          800: '#0f1419',
+          700: '#141b24',
+          600: '#1a2332',
+          500: '#232f42',
         },
-        // Neon Cyan - основной акцент AI
+        // Refined accent colors - less neon, more professional
         neon: {
-          cyan: '#00f5ff',
-          blue: '#0080ff',
-          purple: '#bf00ff',
-          pink: '#ff00ff',
-          green: '#00ff88',
-          red: '#ff0055',
-          orange: '#ff8800',
-          yellow: '#ffee00',
+          cyan: '#0ea5e9',      // Softer cyan (sky-500)
+          blue: '#3b82f6',      // Professional blue (blue-500)
+          purple: '#8b5cf6',    // Muted purple (violet-500)
+          pink: '#ec4899',      // Subtle pink (pink-500)
+          green: '#10b981',     // Balanced green (emerald-500)
+          red: '#ef4444',       // Clean red (red-500)
+          orange: '#f97316',    // Professional orange (orange-500)
+          yellow: '#eab308',    // Refined yellow (yellow-500)
         },
-        // AI статусы
+        // AI status colors - more subtle
         ai: {
-          active: '#00ff88',
-          processing: '#00f5ff',
-          warning: '#ff8800',
-          error: '#ff0055',
-          idle: '#6366f1',
+          active: '#10b981',    // emerald-500
+          processing: '#0ea5e9', // sky-500
+          warning: '#f59e0b',   // amber-500
+          error: '#ef4444',     // red-500
+          idle: '#6366f1',      // indigo-500
         },
         // Legacy colors для совместимости
         primary: {
@@ -86,23 +86,23 @@ export default {
         },
       },
       boxShadow: {
-        'neon-cyan': '0 0 5px #00f5ff, 0 0 20px #00f5ff, 0 0 40px #00f5ff',
-        'neon-green': '0 0 5px #00ff88, 0 0 20px #00ff88, 0 0 40px #00ff88',
-        'neon-red': '0 0 5px #ff0055, 0 0 20px #ff0055, 0 0 40px #ff0055',
-        'neon-purple': '0 0 5px #bf00ff, 0 0 20px #bf00ff, 0 0 40px #bf00ff',
-        'neon-orange': '0 0 5px #ff8800, 0 0 20px #ff8800',
-        'glow-sm': '0 0 10px rgba(0, 245, 255, 0.3)',
-        'glow-md': '0 0 20px rgba(0, 245, 255, 0.4)',
-        'glow-lg': '0 0 30px rgba(0, 245, 255, 0.5)',
-        'inner-glow': 'inset 0 0 20px rgba(0, 245, 255, 0.1)',
+        'neon-cyan': '0 0 10px rgba(14, 165, 233, 0.3), 0 0 20px rgba(14, 165, 233, 0.2)',
+        'neon-green': '0 0 10px rgba(16, 185, 129, 0.3), 0 0 20px rgba(16, 185, 129, 0.2)',
+        'neon-red': '0 0 10px rgba(239, 68, 68, 0.3), 0 0 20px rgba(239, 68, 68, 0.2)',
+        'neon-purple': '0 0 10px rgba(139, 92, 246, 0.3), 0 0 20px rgba(139, 92, 246, 0.2)',
+        'neon-orange': '0 0 10px rgba(249, 115, 22, 0.3), 0 0 20px rgba(249, 115, 22, 0.2)',
+        'glow-sm': '0 0 8px rgba(14, 165, 233, 0.15)',
+        'glow-md': '0 0 16px rgba(14, 165, 233, 0.2)',
+        'glow-lg': '0 0 24px rgba(14, 165, 233, 0.25)',
+        'inner-glow': 'inset 0 0 16px rgba(14, 165, 233, 0.08)',
       },
       backgroundImage: {
         'cyber-grid': `
-          linear-gradient(rgba(0, 245, 255, 0.03) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(0, 245, 255, 0.03) 1px, transparent 1px)
+          linear-gradient(rgba(14, 165, 233, 0.02) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(14, 165, 233, 0.02) 1px, transparent 1px)
         `,
         'gradient-radial': 'radial-gradient(ellipse at center, var(--tw-gradient-stops))',
-        'gradient-cyber': 'linear-gradient(135deg, #0a0a0f 0%, #1a1a24 50%, #0d0d14 100%)',
+        'gradient-cyber': 'linear-gradient(135deg, #0a0e1a 0%, #1a2332 50%, #0f1419 100%)',
       },
       backgroundSize: {
         'grid-sm': '20px 20px',

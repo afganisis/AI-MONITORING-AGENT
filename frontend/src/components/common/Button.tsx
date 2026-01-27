@@ -20,54 +20,57 @@ export const Button: React.FC<ButtonProps> = ({
 }) => {
   const baseStyles = `
     relative inline-flex items-center justify-center font-medium rounded-lg
-    transition-all duration-300 ease-out
+    transition-all duration-200 ease-out
     focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-cyber-900
     disabled:opacity-50 disabled:cursor-not-allowed
     overflow-hidden
-    font-mono uppercase tracking-wider
+    font-mono tracking-wide
   `;
 
   const variants = {
     primary: `
-      bg-gradient-to-r from-neon-cyan to-neon-blue text-cyber-900 font-bold
-      hover:from-neon-cyan hover:to-neon-cyan
-      focus:ring-neon-cyan
-      ${glow ? 'shadow-[0_0_15px_rgba(0,245,255,0.3)] hover:shadow-neon-cyan' : ''}
+      bg-neon-cyan text-white font-semibold
+      hover:bg-neon-cyan/90
+      focus:ring-neon-cyan/50
+      ${glow ? 'shadow-glow-sm hover:shadow-glow-md' : ''}
     `,
     secondary: `
-      bg-cyber-600 text-gray-100 border border-cyber-500
-      hover:bg-cyber-500 hover:border-neon-cyan/50
-      focus:ring-cyber-500
+      bg-cyber-600 text-gray-100 border border-cyber-500/50
+      hover:bg-cyber-500 hover:border-cyber-400
+      focus:ring-cyber-500/50
     `,
     success: `
-      bg-gradient-to-r from-ai-active to-neon-green text-cyber-900 font-bold
-      hover:shadow-neon-green
-      focus:ring-neon-green
+      bg-ai-active text-white font-semibold
+      hover:bg-ai-active/90
+      focus:ring-ai-active/50
+      ${glow ? 'shadow-[0_0_8px_rgba(16,185,129,0.2)] hover:shadow-[0_0_16px_rgba(16,185,129,0.3)]' : ''}
     `,
     danger: `
-      bg-gradient-to-r from-ai-error to-neon-red text-white font-bold
-      hover:shadow-neon-red
-      focus:ring-neon-red
+      bg-ai-error text-white font-semibold
+      hover:bg-ai-error/90
+      focus:ring-ai-error/50
+      ${glow ? 'shadow-[0_0_8px_rgba(239,68,68,0.2)] hover:shadow-[0_0_16px_rgba(239,68,68,0.3)]' : ''}
     `,
     warning: `
-      bg-gradient-to-r from-ai-warning to-neon-orange text-cyber-900 font-bold
-      hover:shadow-neon-orange
-      focus:ring-neon-orange
+      bg-ai-warning text-white font-semibold
+      hover:bg-ai-warning/90
+      focus:ring-ai-warning/50
+      ${glow ? 'shadow-[0_0_8px_rgba(245,158,11,0.2)] hover:shadow-[0_0_16px_rgba(245,158,11,0.3)]' : ''}
     `,
     ghost: `
       bg-transparent text-gray-300
-      hover:bg-cyber-600/50 hover:text-neon-cyan
-      focus:ring-cyber-500
+      hover:bg-cyber-600/40 hover:text-gray-100
+      focus:ring-cyber-500/50
     `,
     cyber: `
-      bg-transparent border-2 border-neon-cyan text-neon-cyan
-      hover:bg-neon-cyan/10 hover:shadow-neon-cyan
-      focus:ring-neon-cyan
+      bg-transparent border border-neon-cyan/60 text-neon-cyan
+      hover:bg-neon-cyan/10 hover:border-neon-cyan
+      focus:ring-neon-cyan/50
     `,
     outline: `
-      bg-transparent border border-neon-purple/50 text-neon-purple
-      hover:bg-neon-purple/10 hover:border-neon-purple hover:shadow-[0_0_15px_rgba(191,0,255,0.5)]
-      focus:ring-neon-purple
+      bg-transparent border border-neon-purple/60 text-neon-purple
+      hover:bg-neon-purple/10 hover:border-neon-purple
+      focus:ring-neon-purple/50
     `,
   };
 
@@ -83,11 +86,6 @@ export const Button: React.FC<ButtonProps> = ({
       disabled={disabled || isLoading}
       {...props}
     >
-      {/* Animated shine effect */}
-      <span className="absolute inset-0 overflow-hidden">
-        <span className="absolute -inset-full top-0 block w-1/2 h-full bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 animate-shine" />
-      </span>
-
       {isLoading && (
         <svg
           className="animate-spin -ml-1 mr-2 h-4 w-4"

@@ -4,51 +4,53 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-AI Monitoring Agent for ZeroELD - an autonomous system that monitors Electronic Logging Device (ELD) compliance errors through the Fortex API and automatically fixes them using browser automation via Playwright.
+**AI Monitoring Agent for ZeroELD/Fortex** - Autonomous system that monitors Electronic Logging Device (ELD) compliance errors through the Fortex API and automatically fixes them using browser automation via Playwright.
 
-**Architecture:** Full-stack application with FastAPI backend and React/TypeScript frontend
+### Architecture
+- **Backend:** FastAPI + Python 3.11+ + PostgreSQL + Playwright
+- **Frontend:** React 18 + TypeScript + Tailwind CSS + Vite
+- **API Integration:** Fortex REST API (with Redis caching)
+- **Browser Automation:** Playwright (async)
 
-## Development Commands
+### Current Status
+✅ **Phase 1 Complete:** Demo agent that logs in, selects companies/drivers with errors, extracts logs, and performs Smart Analyze
+⏸️ **Phase 2 (Next):** Automatic error correction using fix strategies
+⏸️ **Phase 3 (Future):** Frontend dashboard with real-time WebSocket updates
 
-### Backend (FastAPI + Python 3.11+)
+---
+
+## Quick Start
+
+### Backend Setup
 
 ```bash
 cd backend
 
-# Create and activate virtual environment
+# Create virtual environment
 python -m venv venv
-# Windows:
-venv\Scripts\activate
-# Linux/Mac:
-source venv/bin/activate
+venv\Scripts\activate  # Windows
+# source venv/bin/activate  # Linux/Mac
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Generate SECRET_KEY (first time only)
+# Install Playwright browsers
+playwright install chromium
+
+# Generate SECRET_KEY (first time)
 python generate_secret_key.py
 
-# Run development server (with auto-reload)
+# Copy and configure .env
+cp .env.example .env
+# Edit .env with your Fortex credentials
+
+# Run development server
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-
-# Run production server
-uvicorn app.main:app --host 0.0.0.0 --port 8000
-
-# Linting and formatting
-black app/ --check          # Check formatting
-black app/                  # Apply formatting
-flake8 app/                 # Linting
-mypy app/                   # Type checking
-
-# Testing
-pytest                      # Run all tests
-pytest -v                   # Verbose output
-pytest app/tests/test_specific.py  # Run specific test file
 ```
 
 Backend runs on `http://localhost:8000`, API docs at `/docs`
 
-### Frontend (React + TypeScript + Vite)
+### Frontend Setup
 
 ```bash
 cd frontend
@@ -56,269 +58,254 @@ cd frontend
 # Install dependencies
 npm install
 
-# Run development server (hot reload)
+# Run development server
 npm run dev
 
 # Build for production
 npm run build
-npm run preview  # Preview production build
-
-# Linting
-npm run lint
 ```
 
 Frontend runs on `http://localhost:5173`
 
-## Architecture Overview
+### Run Demo Agent
 
-### Backend Structure (`backend/app/`)
-
-```
-app/
-├── main.py                    # FastAPI app entry point, CORS, startup/shutdown
-├── config.py                  # Environment config using pydantic-settings
-├── api/routes/                # REST API endpoints
-│   ├── health.py             # Health check endpoint
-│   ├── agent.py              # Agent control (start/stop/pause/config)
-│   ├── errors.py             # Error CRUD operations
-│   ├── fixes.py              # Fix history and approval
-│   ├── companies.py          # Company/driver filtering
-│   └── websocket.py          # WebSocket real-time updates
-├── agent/
-│   ├── background_service.py # Main agent polling loop (AgentBackgroundService)
-│   └── strategies/           # Fix strategies (one per error type)
-│       ├── base.py           # BaseFixStrategy abstract class
-│       ├── registry.py       # Strategy registration and lookup
-│       └── *.py              # Concrete strategies (7+ error types)
-├── database/
-│   ├── session.py            # SQLAlchemy async engine and session
-│   └── models.py             # ORM models: Error, Fix, AgentConfig, FixRule
-├── fortex/
-│   ├── client.py             # FortexAPIClient (HTTP client for Fortex API)
-│   └── models.py             # Pydantic models for API responses
-├── playwright/
-│   ├── browser_manager.py    # Browser lifecycle + session persistence
-│   └── actions.py            # Reusable browser automation actions
-├── services/
-│   └── error_classifier.py   # Maps error messages to error keys/severity
-└── websocket/
-    └── manager.py            # WebSocket connection manager (broadcast events)
+```bash
+cd backend
+python test_demo_agent.py
 ```
 
-**Key Backend Components:**
+This will:
+1. Login to Fortex UI
+2. Call Smart Analyze API to find companies with errors
+3. Select company with most errors
+4. Select first driver
+5. Extract last 9 days of logs
+6. Analyze for compliance issues
+7. Save results to `logs_data/`
 
-1. **AgentBackgroundService** (`agent/background_service.py`) - Main async loop that:
-   - Polls Fortex API every N seconds for new errors
-   - Classifies errors using `error_classifier`
-   - Executes fix strategies via Playwright
-   - Broadcasts WebSocket events
-   - Respects `AgentConfig` (polling interval, dry-run mode, approval required)
+---
 
-2. **Fix Strategies** (`agent/strategies/`) - Plugin system for error fixes:
-   - Each strategy inherits from `BaseFixStrategy`
-   - Implements `can_handle()` and `execute()` methods
-   - Registered in `strategy_registry` at startup
-   - Uses `BrowserManager` for Playwright automation
-
-3. **BrowserManager** (`playwright/browser_manager.py`) - Manages browser lifecycle:
-   - Persistent browser context for session cookies
-   - Auto-login to Fortex UI
-   - Screenshot capture on errors
-   - Headless/headful mode toggle
-
-4. **FortexAPIClient** (`fortex/client.py`) - HTTP client for Fortex API:
-   - Hardcoded authorization token in headers
-   - Redis-backed caching (10min server-side)
-   - Automatic retry on network errors
-   - Pydantic model validation
-
-### Frontend Structure (`frontend/src/`)
+## Project Structure
 
 ```
-src/
-├── App.tsx                   # Router setup (BrowserRouter)
-├── main.tsx                  # React entry point
-├── components/
-│   ├── layout/Layout.tsx     # Main layout with sidebar navigation
-│   └── common/               # Reusable UI components
-│       ├── Card.tsx
-│       ├── Button.tsx
-│       ├── Badge.tsx
-│       ├── AIStatusIndicator.tsx
-│       ├── MetricCard.tsx
-│       └── ProgressRing.tsx
-└── pages/
-    ├── Control/Control.tsx   # Main control panel (agent start/stop/config)
-    ├── Activity/Activity.tsx # Activity log and error list
-    ├── Companies/            # Company/driver selection
-    ├── Dashboard/            # Dashboard with stats and charts
-    └── Errors/ErrorList.tsx  # Error list with filters
+AI MONITORING/
+├── backend/                    # FastAPI application
+│   ├── app/
+│   │   ├── main.py            # FastAPI app entry point
+│   │   ├── config.py          # Environment configuration
+│   │   ├── api/routes/        # REST API endpoints
+│   │   ├── agent/
+│   │   │   ├── background_service.py  # Main agent loop
+│   │   │   └── strategies/            # Fix strategies (one per error type)
+│   │   ├── database/
+│   │   │   ├── session.py     # SQLAlchemy async engine
+│   │   │   └── models.py      # ORM models
+│   │   ├── fortex/
+│   │   │   ├── client.py      # FortexAPIClient (HTTP client)
+│   │   │   └── models.py      # Pydantic models
+│   │   ├── playwright/
+│   │   │   ├── browser_manager.py  # Browser lifecycle
+│   │   │   └── actions.py          # Reusable browser actions
+│   │   ├── services/
+│   │   │   └── error_classifier.py # Error classification
+│   │   └── websocket/
+│   │       └── manager.py     # WebSocket manager
+│   ├── test_demo_agent.py     # **Main demo script**
+│   ├── generate_secret_key.py # Secret key generator
+│   ├── requirements.txt       # Python dependencies
+│   └── .env.example           # Environment template
+│
+├── frontend/                  # React application
+│   ├── src/
+│   │   ├── App.tsx           # Router setup
+│   │   ├── components/       # UI components
+│   │   └── pages/            # Page components
+│   └── package.json
+│
+├── CLAUDE.md                  # **This file**
+├── AGENT_DEMO_SUMMARY.md      # Detailed demo notes
+└── README.md                  # Project overview
 ```
 
-**Frontend Tech Stack:**
-- React 18 with React Router for navigation
-- TypeScript for type safety
-- Tailwind CSS for styling
-- Zustand for state management (if used)
-- Axios for API calls
-- Recharts for data visualization
+---
 
-## Database Models (PostgreSQL)
+## Demo Agent Workflow (`backend/test_demo_agent.py`)
 
-**Core Tables:**
+### Flow
+1. **Login** → Authenticate to Fortex UI
+2. **Smart Analyze (Company Level)** → Call `/monitoring/companies` to find companies with errors
+3. **Select Company** → Auto-select company with highest error count
+4. **Select Driver** → Use keyboard navigation for Ant Design Select
+5. **CREATE** → Opens new browser tab
+6. **Date Selection** → Last 9 days (today - 8 days)
+7. **LOAD** → Load logs
+8. **Extract Logs** → Scroll and extract all table rows to JSON
+9. **Basic Analysis** → Scan for error keywords
+10. **Smart Analyze (Driver Level)** → AI-powered error detection
+11. **Save Results** → Store logs and analysis
 
-1. **errors** - Error records discovered by agent
-   - `error_key` - Error type identifier (e.g., `"diagnosticEvent"`)
-   - `severity` - critical/high/medium/low
-   - `status` - pending/in_progress/fixed/failed/ignored
-   - Relations: one-to-many with `fixes`
+### Critical Technical Details
 
-2. **fixes** - Fix attempts and results
-   - `strategy_name` - Which strategy was used
-   - `status` - pending/approved/running/completed/failed
-   - `requires_approval` - Boolean flag
-   - `execution_time_ms` - Performance tracking
+**New Tab Handling:**
+```python
+async with page.context.expect_page() as new_page_info:
+    await create_button.click()
+new_page = await new_page_info.value
+page = new_page  # Switch to new tab
+```
 
-3. **agent_config** - Agent state and configuration (singleton table)
-   - `state` - stopped/starting/running/paused/stopping
-   - `polling_interval_seconds` - How often to check for errors
-   - `max_concurrent_fixes` - Concurrency limit
-   - `require_approval` - Auto-fix vs manual approval
-   - `dry_run_mode` - Test mode (no actual fixes)
+**Ant Design Select (keyboard navigation required):**
+```python
+await page.click('.ant-select')
+await page.keyboard.press('ArrowDown')
+await page.keyboard.press('Enter')
+```
 
-4. **fix_rules** - Per-error-type configuration
-   - `error_key` - Links to error type
-   - `enabled` - Can this error type be fixed?
-   - `auto_fix` - Fix without approval?
-   - `priority` - 0-100 (higher = more urgent)
+**Coordinate-Based Click (for stubborn buttons):**
+```python
+box = await button.bounding_box()
+await page.mouse.click(box['x'] + box['width']/2, box['y'] + box['height']/2)
+```
+
+### Data Output
+- `logs_data/logs_<driver>_<timestamp>.json` - Raw logs
+- `logs_data/issues_<driver>_<timestamp>.json` - Detected issues
+- `logs_data/smart_analyze_<driver>_<timestamp>.json` - AI analysis
+- `screenshots/<step>.png` - Screenshots at each step
+
+---
 
 ## Fortex API Integration
 
-**API Type:** Custom REST API (not PostgREST, despite ZeroELD heritage)
-
-**Base URL:** `https://api.fortex-zero.us` (configurable via `FORTEX_API_URL`)
-
-**Authentication:** Hardcoded token in `Authorization` header (value: `y3He9C57ecfmMAsR19`)
+**Base URL:** `https://api.fortex-zero.us`
+**Auth:** Token in `Authorization` header (from `.env`)
 
 **Key Endpoints:**
+- `GET /monitoring/companies` - List companies with error counts
+- `GET /monitoring/logs-with-errors` - Paginated error list
+- `POST /monitoring/smart-analyze` - AI error analysis
+  ```json
+  {
+    "driverId": "uuid",
+    "dateFrom": "2026-01-19",
+    "dateTo": "2026-01-27"
+  }
+  ```
 
-- `GET /health` - Health check
-- `GET /monitoring` - Overview with error counts and driver stats
-- `GET /monitoring/companies` - List of companies with error summaries
-- `GET /monitoring/logs-with-errors` - Paginated error list with filtering
-- `POST /monitoring/smart-analyze` - AI-powered error analysis
+**Caching:** Fortex has Redis caching (10 min TTL) - don't over-poll.
 
-**Important:** Fortex API has Redis caching (10 minute TTL) server-side. Don't over-poll.
+---
 
-## Playwright Browser Automation
+## Database Models
 
-**Login Flow:**
-1. BrowserManager loads persistent session from `./playwright_data/session_state.json`
-2. If no session, navigates to `FORTEX_UI_URL` and performs login
-3. Session cookies saved for future runs
+**Tables:**
+- `errors` - Error records (error_key, severity, status, driver_id, company_id)
+- `fixes` - Fix attempts (strategy_name, status, requires_approval)
+- `agent_config` - Agent state (singleton: state, polling_interval, require_approval)
+- `fix_rules` - Per-error config (error_key, enabled, auto_fix, priority)
 
-**Fix Execution Pattern:**
-1. Strategy receives `browser_manager.page` (Playwright Page object)
-2. Navigate to error location in UI
-3. Perform fix actions (clicks, fills, etc.)
-4. Capture screenshot on error
-5. Return `FixResult` with success status
+---
 
-**Configuration:**
-- `PLAYWRIGHT_HEADLESS=true` - Run without visible browser
-- `PLAYWRIGHT_SCREENSHOTS_DIR=./screenshots` - Error screenshots
-- `PLAYWRIGHT_SESSION_DIR=./playwright_data` - Session persistence
+## Environment Variables
 
-## Environment Configuration
-
-Copy `.env.example` to `.env` and configure:
-
-**Required:**
-- `DATABASE_URL` - PostgreSQL connection string
-- `SECRET_KEY` - Generate with `python backend/generate_secret_key.py`
-- `FORTEX_UI_USERNAME` / `FORTEX_UI_PASSWORD` - Credentials for browser automation
-
-**Optional but Important:**
-- `AGENT_DRY_RUN_MODE=true` - Test mode (no actual fixes applied)
-- `AGENT_REQUIRE_APPROVAL=false` - Auto-fix without human approval
-- `PLAYWRIGHT_HEADLESS=false` - Show browser for debugging
-
-## Agent Lifecycle
-
-1. **Startup**: API starts, database tables created, agent initialized but NOT running
-2. **Manual Start**: User calls `POST /api/agent/start` to begin polling
-3. **Polling Loop**: Every N seconds:
-   - Fetch errors from Fortex API
-   - Classify new errors, save to database
-   - Load pending fixes
-   - Execute fix strategies via Playwright
-   - Broadcast WebSocket updates
-4. **Pause/Stop**: User controls via API or frontend
-5. **Shutdown**: Graceful cleanup on SIGTERM/SIGINT
-
-## Error Classification System
-
-**Error Classifier** (`services/error_classifier.py`) maps error messages to structured data:
-
-```python
-{
-  "error_key": "diagnosticEvent",        # Unique identifier
-  "error_name": "Diagnostic Event",      # Human-readable name
-  "severity": "low",                     # critical/high/medium/low
-  "category": "diagnostic"               # Category grouping
-}
+### Required
+```bash
+DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/aiagent
+SECRET_KEY=<generate with generate_secret_key.py>
+FORTEX_API_URL=https://api.fortex-zero.us
+FORTEX_API_TOKEN=y3He9C57ecfmMAsR19
+FORTEX_UI_URL=https://fortex-zero.us
+FORTEX_UI_USERNAME=<your_username>
+FORTEX_UI_PASSWORD=<your_password>
 ```
 
-**Severity Levels:**
-- **critical** - Data integrity violations (sequential ID breaks)
-- **high** - Location/odometer errors, status placement errors
-- **medium** - Missing events, unidentified drivers
-- **low** - Diagnostic events, power-up/shutdown warnings
+### Optional
+```bash
+AGENT_DRY_RUN_MODE=false
+AGENT_REQUIRE_APPROVAL=true
+PLAYWRIGHT_HEADLESS=true
+PLAYWRIGHT_SCREENSHOTS_DIR=./screenshots
+```
 
-## Working with Fix Strategies
+---
 
-To add a new fix strategy:
+## Common Tasks
 
-1. Create `backend/app/agent/strategies/my_error.py`
-2. Inherit from `BaseFixStrategy`
-3. Implement required methods:
-   ```python
-   class MyErrorStrategy(BaseFixStrategy):
-       @property
-       def error_key(self) -> str:
-           return "myErrorKey"
+### Start Dev Environment
+```bash
+# Backend
+cd backend && venv\Scripts\activate && uvicorn app.main:app --reload
 
-       @property
-       def strategy_name(self) -> str:
-           return "My Error Fix Strategy"
+# Frontend
+cd frontend && npm run dev
+```
 
-       async def can_handle(self, error) -> bool:
-           return error.error_key == self.error_key
+### Run Demo
+```bash
+cd backend && python test_demo_agent.py
+```
 
-       async def execute(self, error, fix, browser_manager) -> FixResult:
-           # Use browser_manager.page for automation
-           page = browser_manager.page
-           # ... perform fix actions ...
-           return FixResult(success=True, message="Fixed", execution_time_ms=1000)
-   ```
-4. Register in `strategies/registry.py` by importing and adding to registry
+### Linting
+```bash
+cd backend
+black app/
+flake8 app/
+mypy app/
+```
 
-## WebSocket Events
+---
 
-Frontend can connect to `ws://localhost:8000/ws` for real-time updates:
+## Troubleshooting
 
-**Event Types:**
-- `agent_status` - Agent state changed (running/stopped/paused)
-- `error_discovered` - New error found
-- `fix_started` - Fix execution began
-- `fix_completed` - Fix finished (success/failure)
-- `fix_approved` / `fix_rejected` - Manual approval events
+### Playwright Login Fails
+- Check `FORTEX_UI_URL` and credentials in `.env`
+- Run with `PLAYWRIGHT_HEADLESS=false` to see browser
 
-## Legacy Notes
+### Driver Selection Not Working
+- Use keyboard navigation (Ant Design issue)
 
-This project originally integrated with ZeroELD's PostgREST API (`https://cloud.zeroeld.us`). The architecture was refactored to use Fortex API, but some references remain:
-- `ZEROELD_*` environment variables (unused, kept for reference)
-- `zeroVios.js` - Error filter definitions (now replaced by Python classifier)
-- PostgREST documentation in original `CLAUDE.md` (still relevant for understanding ELD domain)
+### LOAD Button Not Found
+- Check if CREATE opens new tab - use `expect_page()`
 
-The ELD domain concepts (duty statuses, HOS compliance, event types) still apply - only the API changed.
+### Smart Analyze Returns 401
+- Check `FORTEX_API_TOKEN` in `.env`
+
+---
+
+## Next Steps (Roadmap)
+
+### Phase 2: Auto Error Correction
+- [ ] Implement fix strategies for top error types
+- [ ] Integrate AgentBackgroundService
+- [ ] Add approval workflow
+
+### Phase 3: Frontend Dashboard
+- [ ] Real-time WebSocket updates
+- [ ] Error list with filters
+- [ ] Agent control panel
+
+---
+
+## Best Practices
+
+- Use `async`/`await` for all I/O
+- Type hints for function signatures
+- `loguru` for logging (not `print()`)
+- Wrap Playwright in `try`/`except`
+- Take screenshots on errors
+- Use Pydantic for API validation
+
+---
+
+## Key Learnings
+
+1. **Ant Design Select requires keyboard navigation** - `.click()` on options doesn't work
+2. **Fortex CREATE opens new tab** - Must use `expect_page()`
+3. **Date variables must be function-scoped** - Multiple steps use same dates
+4. **Coordinate-based clicks are most reliable** - When React handlers fail
+5. **Smart Analyze should run BEFORE company selection** - Prioritize companies with errors
+
+---
+
+*Last updated: 2026-01-27*
+*Demo agent fully functional. Next: Fix strategy implementation.*
