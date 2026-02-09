@@ -3,7 +3,6 @@ import { Card, CardHeader } from '@/components/common/Card';
 import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
 import { Play, Pause, StopCircle, Settings, AlertTriangle } from 'lucide-react';
-import { AgentState } from '@/types';
 import { getAgentStateColor } from '@/utils/format';
 
 const defaultConfig = {

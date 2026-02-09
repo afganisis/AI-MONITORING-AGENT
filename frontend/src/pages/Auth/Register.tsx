@@ -84,9 +84,9 @@ export const Register: React.FC = () => {
             <Bot className="w-10 h-10 text-neon-cyan" />
           </div>
           <h1 className="text-3xl font-cyber font-bold text-white mb-2">
-            ZERO<span className="text-neon-cyan">ELD</span>
+            PTHORA<span className="text-neon-cyan">.AI</span>
           </h1>
-          <p className="text-gray-400 font-mono text-sm">AI Monitoring System</p>
+          <p className="text-gray-400 font-mono text-sm">ELD Monitoring System</p>
         </div>
 
         {/* Register Form */}
@@ -257,7 +257,7 @@ export const Register: React.FC = () => {
         {/* Footer */}
         <div className="mt-6 text-center">
           <p className="text-gray-500 text-xs font-mono">
-            Powered by AI Monitoring Technology
+            Powered by Pthora AI Technology
           </p>
         </div>
       </div>

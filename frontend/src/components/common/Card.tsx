@@ -6,7 +6,7 @@ export interface CardProps {
   className?: string;
   padding?: 'none' | 'sm' | 'md' | 'lg';
   hover?: boolean;
-  glow?: 'none' | 'cyan' | 'green' | 'red' | 'purple' | 'orange';
+  glow?: 'none' | 'cyan' | 'green' | 'red' | 'purple' | 'orange' | 'yellow';
   variant?: 'default' | 'glass' | 'bordered' | 'hologram';
 }
 
@@ -41,6 +41,7 @@ export const Card: React.FC<CardProps> = ({
     red: 'shadow-[0_0_8px_rgba(239,68,68,0.15)] hover:shadow-[0_0_16px_rgba(239,68,68,0.2)]',
     purple: 'shadow-[0_0_8px_rgba(139,92,246,0.15)] hover:shadow-[0_0_16px_rgba(139,92,246,0.2)]',
     orange: 'shadow-[0_0_8px_rgba(249,115,22,0.15)] hover:shadow-[0_0_16px_rgba(249,115,22,0.2)]',
+    yellow: 'shadow-[0_0_8px_rgba(234,179,8,0.15)] hover:shadow-[0_0_16px_rgba(234,179,8,0.2)]',
   };
 
   const hoverStyles = hover ? 'hover:border-neon-cyan/30 hover:shadow-glow-md cursor-pointer hover:scale-[1.01]' : '';

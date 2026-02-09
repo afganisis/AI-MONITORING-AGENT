@@ -1,15 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard,
   Bot,
-  Settings,
-  FileText,
   Activity,
-  Building2,
   TrendingUp,
   LogOut,
-  User,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useAuth } from '../../contexts/AuthContext';
@@ -61,9 +56,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               </div>
               <div>
                 <h1 className="text-xl font-semibold text-white">
-                  ZERO<span className="text-neon-cyan">ELD</span>
+                  PTHORA<span className="text-neon-cyan">.AI</span>
                 </h1>
-                <p className="text-xs text-gray-500 tracking-wide">AI Monitoring</p>
+                <p className="text-xs text-gray-500 tracking-wide">ELD Monitoring System</p>
               </div>
             </div>
           </div>

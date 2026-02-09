@@ -11,84 +11,75 @@ import {
   Loader2,
   RefreshCw,
   TrendingUp,
+  ChevronDown,
+  ChevronRight,
+  Filter,
+  XCircle,
+  AlertCircle,
 } from 'lucide-react';
-import { formatRelativeTime } from '@/utils/format';
 import { Button } from '@/components/common/Button';
+import { ErrorDetailModal } from '@/components/errors/ErrorDetailModal';
+import {
+  formatErrorDateTime,
+  ERROR_CATEGORIES,
+} from '@/utils/errorDescriptions';
+import { useData } from '@/contexts/DataContext';
 
-interface ErrorByDriver {
-  driver_id: string;
-  driver_name: string;
-  company_id: string;
-  company_name: string;
-  total_errors: number;
-  by_severity: {
-    critical: number;
-    high: number;
-    medium: number;
-    low: number;
-  };
-  by_status: {
-    pending: number;
-    fixing: number;
-    fixed: number;
-    failed: number;
-  };
-  recent_errors: Array<{
-    id: string;
-    error_key: string;
-    error_name: string;
-    error_message: string;
-    severity: string;
-    status: string;
-    discovered_at: string;
-  }>;
+interface RecentError {
+  id: string;
+  error_key: string;
+  error_name: string;
+  error_message: string;
+  severity: string;
+  status: string;
+  category?: string;
+  fix_strategy?: string;
+  discovered_at: string;
+  driver_name?: string;
+  company_name?: string;
+  error_metadata?: Record<string, any>;
 }
 
 export const Results: React.FC = () => {
-  const [results, setResults] = useState<ErrorByDriver[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    errorsByDriver,
+    errorsByDriverLoading,
+    refreshErrorsByDriver,
+    getCacheAge,
+  } = useData();
+
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [expandedDrivers, setExpandedDrivers] = useState<Set<string>>(new Set());
-
-  const fetchResults = async () => {
-    try {
-      const response = await fetch('http://localhost:8000/api/errors/by-driver');
-      if (response.ok) {
-        const data = await response.json();
-        setResults(data.results || []);
-      }
-      setLastUpdate(new Date());
-    } catch (error) {
-      console.error('Error fetching results:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [selectedError, setSelectedError] = useState<RecentError | null>(null);
+  const [filterSeverity, setFilterSeverity] = useState<string | null>(null);
+  const [filterCategory, setFilterCategory] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchResults();
-    const interval = setInterval(fetchResults, 15000); // Refresh every 15 seconds
-    return () => clearInterval(interval);
-  }, []);
+    const cacheAge = getCacheAge('errorsByDriver');
+    if (cacheAge !== null) {
+      setLastUpdate(new Date(Date.now() - cacheAge));
+    }
+  }, [errorsByDriver, getCacheAge]);
 
-  const getSeverityColor = (severity: string) => {
-    const colors = {
-      critical: 'text-red-400 bg-red-900/30 border-red-500',
-      high: 'text-orange-400 bg-orange-900/30 border-orange-500',
-      medium: 'text-yellow-400 bg-yellow-900/30 border-yellow-500',
-      low: 'text-gray-400 bg-gray-900/30 border-gray-500',
+  const getSeverityBadge = (severity: string) => {
+    const styles = {
+      critical: 'bg-red-500/20 text-red-400 border-red-500/50',
+      high: 'bg-orange-500/20 text-orange-400 border-orange-500/50',
+      medium: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50',
+      low: 'bg-gray-500/20 text-gray-400 border-gray-500/50',
     };
-    return colors[severity as keyof typeof colors] || colors.low;
+    return styles[severity as keyof typeof styles] || styles.low;
   };
 
-  const getStatusColor = (status: string) => {
-    const colors = {
-      pending: 'text-yellow-400',
-      fixing: 'text-cyan-400',
-      fixed: 'text-green-400',
-      failed: 'text-red-400',
+  const getStatusBadge = (status: string) => {
+    const styles = {
+      pending: 'bg-yellow-500/20 text-yellow-400',
+      fixing: 'bg-cyan-500/20 text-cyan-400',
+      fixed: 'bg-green-500/20 text-green-400',
+      failed: 'bg-red-500/20 text-red-400',
+      ignored: 'bg-gray-500/20 text-gray-500',
     };
-    return colors[status as keyof typeof colors] || 'text-gray-400';
+    return styles[status as keyof typeof styles] || 'bg-gray-500/20 text-gray-400';
   };
 
   const toggleDriverExpansion = (driverId: string) => {
@@ -103,7 +94,19 @@ export const Results: React.FC = () => {
     });
   };
 
-  if (loading) {
+  const expandAll = () => {
+    setExpandedDrivers(new Set(errorsByDriver.map(d => d.driver_id)));
+  };
+
+  const collapseAll = () => {
+    setExpandedDrivers(new Set());
+  };
+
+  const formatRelativeTime = (isoString: string): string => {
+    return formatErrorDateTime(isoString).relative;
+  };
+
+  if (errorsByDriverLoading && errorsByDriver.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
@@ -111,33 +114,79 @@ export const Results: React.FC = () => {
     );
   }
 
-  const totalDrivers = results.length;
-  const totalErrors = results.reduce((sum, r) => sum + r.total_errors, 0);
-  const totalFixed = results.reduce((sum, r) => sum + r.by_status.fixed, 0);
-  const totalPending = results.reduce((sum, r) => sum + r.by_status.pending, 0);
+  const totalDrivers = errorsByDriver.length;
+  const totalErrors = errorsByDriver.reduce((sum, r) => sum + r.total_errors, 0);
+  const totalFixed = errorsByDriver.reduce((sum, r) => sum + r.by_status.fixed, 0);
+  const totalPending = errorsByDriver.reduce((sum, r) => sum + r.by_status.pending, 0);
+  const totalCritical = errorsByDriver.reduce((sum, r) => sum + r.by_severity.critical, 0);
+
+  const filterErrors = (errors: RecentError[]): RecentError[] => {
+    return errors.filter((error) => {
+      if (filterSeverity && error.severity !== filterSeverity) return false;
+      if (filterCategory && error.category !== filterCategory) return false;
+      return true;
+    });
+  };
 
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <TrendingUp className="w-7 h-7 text-cyan-400" />
-            Результаты по водителям
+            Результаты анализа
           </h1>
           <p className="text-gray-400 text-sm mt-1">
-            Последнее обновление: {formatRelativeTime(lastUpdate.toISOString())}
+            Обновлено: {formatRelativeTime(lastUpdate.toISOString())}
           </p>
         </div>
 
-        <Button onClick={fetchResults} variant="secondary" size="sm">
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Обновить
-        </Button>
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Filters */}
+          <select
+            value={filterSeverity || ''}
+            onChange={(e) => setFilterSeverity(e.target.value || null)}
+            className="bg-cyber-700 border border-cyber-600 rounded-lg px-3 py-2 text-sm text-white"
+          >
+            <option value="">Все уровни</option>
+            <option value="critical">Критичные</option>
+            <option value="high">Высокие</option>
+            <option value="medium">Средние</option>
+            <option value="low">Низкие</option>
+          </select>
+
+          <select
+            value={filterCategory || ''}
+            onChange={(e) => setFilterCategory(e.target.value || null)}
+            className="bg-cyber-700 border border-cyber-600 rounded-lg px-3 py-2 text-sm text-white"
+          >
+            <option value="">Все категории</option>
+            {Object.entries(ERROR_CATEGORIES).map(([key, cat]) => (
+              <option key={key} value={key}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
+
+          <div className="flex gap-1">
+            <Button onClick={expandAll} variant="ghost" size="sm" title="Развернуть все">
+              <ChevronDown className="w-4 h-4" />
+            </Button>
+            <Button onClick={collapseAll} variant="ghost" size="sm" title="Свернуть все">
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+
+          <Button onClick={refreshErrorsByDriver} variant="secondary" size="sm">
+            <RefreshCw className={`w-4 h-4 mr-2 ${errorsByDriverLoading ? 'animate-spin' : ''}`} />
+            Обновить
+          </Button>
+        </div>
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <MetricCard
           title="Водителей"
           value={totalDrivers}
@@ -151,7 +200,13 @@ export const Results: React.FC = () => {
           color="orange"
         />
         <MetricCard
-          title="В ожидании"
+          title="Критичных"
+          value={totalCritical}
+          icon={XCircle}
+          color="red"
+        />
+        <MetricCard
+          title="Ожидает"
           value={totalPending}
           icon={Clock}
           color="yellow"
@@ -165,133 +220,172 @@ export const Results: React.FC = () => {
       </div>
 
       {/* Driver Results */}
-      {results.length === 0 ? (
+      {errorsByDriver.length === 0 ? (
         <Card variant="glass">
           <div className="text-center py-12">
             <Users className="w-16 h-16 text-gray-600 mx-auto mb-4" />
             <p className="text-gray-400 text-lg">Нет данных</p>
             <p className="text-gray-500 text-sm mt-2">
-              Выберите водителей и запустите агента
+              Запустите сканирование для получения результатов
             </p>
           </div>
         </Card>
       ) : (
-        <div className="space-y-6">
-          {results.map((driver) => (
-            <Card key={driver.driver_id} variant="glass">
-              <CardHeader
-                title={driver.driver_name || 'Неизвестный водитель'}
-                subtitle={
-                  <div className="flex items-center gap-2 mt-1">
-                    <Building2 className="w-4 h-4" />
-                    <span>{driver.company_name}</span>
-                  </div>
-                }
-                icon={<Users className="w-5 h-5" />}
-              />
+        <div className="space-y-3">
+          {errorsByDriver.map((driver) => {
+            const filteredErrors = filterErrors(driver.recent_errors);
+            const isExpanded = expandedDrivers.has(driver.driver_id);
+            const hasErrors = filteredErrors.length > 0;
 
-              {/* Driver Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div className="bg-cyber-700 rounded-lg p-3 border border-cyber-600">
-                  <div className="text-xs text-gray-400 mb-1">Всего ошибок</div>
-                  <div className="text-xl font-bold text-white">{driver.total_errors}</div>
-                </div>
-                <div className="bg-yellow-900/20 rounded-lg p-3 border border-yellow-500/30">
-                  <div className="text-xs text-yellow-400 mb-1">В ожидании</div>
-                  <div className="text-xl font-bold text-yellow-400">{driver.by_status.pending}</div>
-                </div>
-                <div className="bg-cyan-900/20 rounded-lg p-3 border border-cyan-500/30">
-                  <div className="text-xs text-cyan-400 mb-1">Исправляется</div>
-                  <div className="text-xl font-bold text-cyan-400">{driver.by_status.fixing}</div>
-                </div>
-                <div className="bg-green-900/20 rounded-lg p-3 border border-green-500/30">
-                  <div className="text-xs text-green-400 mb-1">Исправлено</div>
-                  <div className="text-xl font-bold text-green-400">{driver.by_status.fixed}</div>
-                </div>
-              </div>
+            return (
+              <Card key={driver.driver_id} variant="glass" className="overflow-hidden">
+                {/* Compact Driver Header */}
+                <div
+                  className="p-4 cursor-pointer hover:bg-cyber-700/30 transition-colors"
+                  onClick={() => toggleDriverExpansion(driver.driver_id)}
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      {/* Expand/Collapse Icon */}
+                      <div className="flex-shrink-0">
+                        {isExpanded ? (
+                          <ChevronDown className="w-5 h-5 text-gray-400" />
+                        ) : (
+                          <ChevronRight className="w-5 h-5 text-gray-400" />
+                        )}
+                      </div>
 
-              {/* Severity Distribution */}
-              <div className="mb-6">
-                <h3 className="text-sm font-semibold text-gray-300 mb-3">По критичности</h3>
-                <div className="grid grid-cols-4 gap-2">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-red-400">{driver.by_severity.critical}</div>
-                    <div className="text-xs text-gray-500 uppercase">Critical</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-orange-400">{driver.by_severity.high}</div>
-                    <div className="text-xs text-gray-500 uppercase">High</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-yellow-400">{driver.by_severity.medium}</div>
-                    <div className="text-xs text-gray-500 uppercase">Medium</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-gray-400">{driver.by_severity.low}</div>
-                    <div className="text-xs text-gray-500 uppercase">Low</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Recent Errors */}
-              {driver.recent_errors.length > 0 && (
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-semibold text-gray-300">Последние ошибки</h3>
-                    {driver.recent_errors.length > 5 && (
-                      <Button
-                        onClick={() => toggleDriverExpansion(driver.driver_id)}
-                        variant="ghost"
-                        size="sm"
-                        className="text-xs"
-                      >
-                        {expandedDrivers.has(driver.driver_id)
-                          ? `Скрыть (${driver.recent_errors.length - 5} ещё)`
-                          : `Показать все (${driver.recent_errors.length})`}
-                      </Button>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    {(expandedDrivers.has(driver.driver_id)
-                      ? driver.recent_errors
-                      : driver.recent_errors.slice(0, 5)
-                    ).map((error) => (
-                      <div
-                        key={error.id}
-                        className={`p-3 rounded-lg border ${getSeverityColor(error.severity)}`}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Badge variant={error.severity as any} className="text-xs">
-                                {error.severity.toUpperCase()}
-                              </Badge>
-                              <span className={`text-xs font-mono ${getStatusColor(error.status)}`}>
-                                {error.status}
-                              </span>
-                            </div>
-                            <h4 className="text-sm font-semibold text-white mb-1">
-                              {error.error_name}
-                            </h4>
-                            {error.error_message && (
-                              <p className="text-xs text-gray-400 truncate">
-                                {error.error_message}
-                              </p>
-                            )}
-                          </div>
-                          <span className="text-xs text-gray-500 whitespace-nowrap ml-3">
-                            {formatRelativeTime(error.discovered_at)}
+                      {/* Driver Info */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Users className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+                          <span className="font-semibold text-white truncate">
+                            {driver.driver_name || 'Неизвестный водитель'}
                           </span>
+                          <span className="text-gray-500">•</span>
+                          <div className="flex items-center gap-1 text-gray-400 text-sm">
+                            <Building2 className="w-3 h-3" />
+                            <span className="truncate">{driver.company_name || 'N/A'}</span>
+                          </div>
                         </div>
                       </div>
-                    ))}
+                    </div>
+
+                    {/* Quick Stats Badges */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {driver.by_severity.critical > 0 && (
+                        <span className="px-2 py-1 text-xs font-mono bg-red-500/20 text-red-400 rounded border border-red-500/30">
+                          {driver.by_severity.critical} CRIT
+                        </span>
+                      )}
+                      {driver.by_severity.high > 0 && (
+                        <span className="px-2 py-1 text-xs font-mono bg-orange-500/20 text-orange-400 rounded border border-orange-500/30">
+                          {driver.by_severity.high} HIGH
+                        </span>
+                      )}
+                      <span className="px-2 py-1 text-xs font-mono bg-cyber-600 text-gray-300 rounded">
+                        {driver.total_errors} всего
+                      </span>
+                      {driver.by_status.fixed > 0 && (
+                        <span className="px-2 py-1 text-xs font-mono bg-green-500/20 text-green-400 rounded">
+                          {driver.by_status.fixed} ✓
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              )}
-            </Card>
-          ))}
+
+                {/* Expanded Content */}
+                {isExpanded && (
+                  <div className="border-t border-cyber-600/50">
+                    {/* Errors Table */}
+                    {hasErrors ? (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="bg-cyber-700/50 text-gray-400 text-xs uppercase">
+                              <th className="px-4 py-3 text-left font-medium">Уровень</th>
+                              <th className="px-4 py-3 text-left font-medium">Тип ошибки</th>
+                              <th className="px-4 py-3 text-left font-medium">Описание</th>
+                              <th className="px-4 py-3 text-left font-medium">Статус</th>
+                              <th className="px-4 py-3 text-left font-medium">Время</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-cyber-600/30">
+                            {filteredErrors.map((error) => {
+                              const dateTime = formatErrorDateTime(error.discovered_at);
+                              return (
+                                <tr
+                                  key={error.id}
+                                  onClick={() => setSelectedError({
+                                    ...error,
+                                    driver_name: driver.driver_name,
+                                    company_name: driver.company_name,
+                                  })}
+                                  className="hover:bg-cyber-700/30 cursor-pointer transition-colors"
+                                >
+                                  <td className="px-4 py-3">
+                                    <span className={`px-2 py-1 text-xs font-mono rounded border ${getSeverityBadge(error.severity)}`}>
+                                      {error.severity.toUpperCase()}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <div>
+                                      <span className="text-white font-medium">{error.error_name}</span>
+                                      <div className="text-xs text-gray-500 font-mono">{error.error_key}</div>
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3 max-w-xs">
+                                    <p className="text-gray-400 truncate" title={error.error_message}>
+                                      {error.error_message || '—'}
+                                    </p>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <span className={`px-2 py-1 text-xs font-mono rounded ${getStatusBadge(error.status)}`}>
+                                      {error.status}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
+                                    {dateTime.relative}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="p-8 text-center text-gray-500">
+                        <Filter className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p>Нет ошибок по выбранным фильтрам</p>
+                      </div>
+                    )}
+
+                    {/* Summary Bar */}
+                    <div className="px-4 py-3 bg-cyber-700/30 border-t border-cyber-600/30 flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-4 text-gray-400">
+                        <span>По критичности:</span>
+                        <span className="text-red-400">{driver.by_severity.critical} critical</span>
+                        <span className="text-orange-400">{driver.by_severity.high} high</span>
+                        <span className="text-yellow-400">{driver.by_severity.medium} medium</span>
+                        <span className="text-gray-500">{driver.by_severity.low} low</span>
+                      </div>
+                      <div className="flex items-center gap-4 text-gray-400">
+                        <span className="text-yellow-400">{driver.by_status.pending} pending</span>
+                        <span className="text-cyan-400">{driver.by_status.fixing} fixing</span>
+                        <span className="text-green-400">{driver.by_status.fixed} fixed</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </Card>
+            );
+          })}
         </div>
       )}
+
+      {/* Error Detail Modal */}
+      <ErrorDetailModal error={selectedError} onClose={() => setSelectedError(null)} />
     </div>
   );
 };

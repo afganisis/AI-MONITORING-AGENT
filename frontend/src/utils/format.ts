@@ -1,12 +1,26 @@
 import { format, formatDistanceToNow } from 'date-fns';
-import { ErrorSeverity, ErrorStatus, FixStatus, AgentState } from '@/types';
+import { ErrorSeverity, ErrorStatus, FixStatus } from '@/types';
 
-export const formatDate = (date: string | Date): string => {
-  return format(new Date(date), 'MMM dd, yyyy HH:mm');
+export const formatDate = (date: string | Date | null | undefined): string => {
+  if (!date) return 'N/A';
+  try {
+    const parsedDate = new Date(date);
+    if (isNaN(parsedDate.getTime())) return 'Invalid date';
+    return format(parsedDate, 'MMM dd, yyyy HH:mm');
+  } catch {
+    return 'Invalid date';
+  }
 };
 
-export const formatRelativeTime = (date: string | Date): string => {
-  return formatDistanceToNow(new Date(date), { addSuffix: true });
+export const formatRelativeTime = (date: string | Date | null | undefined): string => {
+  if (!date) return 'N/A';
+  try {
+    const parsedDate = new Date(date);
+    if (isNaN(parsedDate.getTime())) return 'Invalid date';
+    return formatDistanceToNow(parsedDate, { addSuffix: true });
+  } catch {
+    return 'Invalid date';
+  }
 };
 
 export const getSeverityColor = (severity: ErrorSeverity): string => {
@@ -42,15 +56,15 @@ export const getFixStatusColor = (status: FixStatus): string => {
   return colors[status];
 };
 
-export const getAgentStateColor = (state: AgentState): string => {
-  const colors: Record<AgentState, string> = {
+export const getAgentStateColor = (state: string): string => {
+  const colors: Record<string, string> = {
     stopped: 'bg-gray-100 text-gray-800',
     starting: 'bg-blue-100 text-blue-800',
     running: 'bg-success-100 text-success-800',
     paused: 'bg-warning-100 text-warning-800',
     stopping: 'bg-warning-100 text-warning-800',
   };
-  return colors[state];
+  return colors[state] || 'bg-gray-100 text-gray-800';
 };
 
 export const formatErrorKey = (key: string): string => {

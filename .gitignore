@@ -44,6 +44,9 @@ playwright_data/
 test-results/
 playwright-report/
 
+# Alembic migrations (optional - keep only initial migration)
+# backend/alembic/versions/*.py
+
 # Node
 node_modules/
 .pnpm-debug.log*

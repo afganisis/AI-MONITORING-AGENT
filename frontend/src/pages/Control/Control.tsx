@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Users, Building2, CheckCircle2, XCircle, Loader2, Play, Pause, StopCircle } from 'lucide-react';
-import { Card, CardHeader } from '@/components/common/Card';
+import React, { useState } from 'react';
+import { Search, Users, Building2, XCircle, Loader2, Play, Pause, StopCircle, FileSearch, Microscope, CheckCircle2 } from 'lucide-react';
+import { Card } from '@/components/common/Card';
 import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
 import { AIStatusIndicator } from '@/components/common/AIStatusIndicator';
+import { ProgressBar } from '@/components/common/ProgressBar';
+import { useData } from '@/contexts/DataContext';
 
 interface Driver {
   driver_id: string;
@@ -16,85 +18,28 @@ interface Company {
   drivers: Driver[];
 }
 
-interface AgentConfig {
-  state: string;
-  polling_interval_seconds: number;
-  max_concurrent_fixes: number;
-  require_approval: boolean;
-  dry_run_mode: boolean;
-}
-
-const defaultConfig: AgentConfig = {
-  state: 'stopped',
-  polling_interval_seconds: 300,
-  max_concurrent_fixes: 1,
-  require_approval: false,
-  dry_run_mode: false,
-};
-
 export const Control: React.FC = () => {
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Use global data context
+  const {
+    companies,
+    companiesLoading,
+    agentConfig,
+    refreshAgentConfig,
+    refreshErrorsByDriver,
+    refreshErrorStats,
+    refreshRecentErrors,
+    addScanActivity,
+    updateScanActivity,
+  } = useData();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [selectedDriverIds, setSelectedDriverIds] = useState<Set<string>>(new Set());
-  const [saving, setSaving] = useState(false);
-
-  // Agent state
-  const [agentConfig, setAgentConfig] = useState<AgentConfig>(defaultConfig);
+  const [scanning, setScanning] = useState(false);
+  const [currentScanId, setCurrentScanId] = useState<string | null>(null);
+  const [currentActivityId, setCurrentActivityId] = useState<string | null>(null);
+  const [scanWithLogs, setScanWithLogs] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-
-  useEffect(() => {
-    fetchCompanies();
-    fetchSelectedDrivers();
-    fetchAgentConfig();
-
-    const interval = setInterval(fetchAgentConfig, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const fetchCompanies = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('http://localhost:8000/api/companies');
-      if (!response.ok) throw new Error('Failed to fetch companies');
-
-      const data = await response.json();
-      setCompanies(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      console.error('Error fetching companies:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchSelectedDrivers = async () => {
-    try {
-      const response = await fetch('http://localhost:8000/api/drivers/selected');
-      if (response.ok) {
-        const driverIds = await response.json();
-        setSelectedDriverIds(new Set(driverIds));
-      }
-    } catch (err) {
-      console.error('Error fetching selected drivers:', err);
-    }
-  };
-
-  const fetchAgentConfig = async () => {
-    try {
-      const response = await fetch('http://localhost:8000/api/agent/status');
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Agent config fetched:', data);
-        setAgentConfig(data);
-      }
-    } catch (error) {
-      console.error('Error fetching agent config:', error);
-    }
-  };
 
   const handleCompanyClick = (companyId: string) => {
     setSelectedCompanyId(selectedCompanyId === companyId ? null : companyId);
@@ -123,21 +68,142 @@ export const Control: React.FC = () => {
     setSelectedDriverIds(newSelected);
   };
 
-  const handleSaveSelection = async () => {
+  const handleSmartAnalyze = async (withLogs: boolean = false) => {
+    if (selectedDriverIds.size === 0 && !selectedCompanyId) {
+      alert('Выберите компанию или водителей для сканирования!');
+      return;
+    }
+
+    const driverCount = selectedDriverIds.size || 'всех';
+    const scanType = withLogs ? 'Smart Analyze + Сканирование логов' : 'Smart Analyze';
+    const message = selectedCompanyId
+      ? `Запустить ${scanType} для компании?`
+      : `Запустить ${scanType} для ${driverCount} водителей?`;
+
+    if (!confirm(message)) return;
+
+    // Get company name for activity tracking
+    const selectedCompany = companies.find(c => c.company_id === selectedCompanyId);
+    const companyName = selectedCompany?.company_name;
+
     try {
-      setSaving(true);
-      const response = await fetch('http://localhost:8000/api/drivers/select', {
+      setScanning(true);
+      setScanWithLogs(withLogs);
+      const response = await fetch('http://localhost:8000/api/agent/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ driver_ids: Array.from(selectedDriverIds) })
+        body: JSON.stringify({
+          company_id: selectedCompanyId,
+          driver_ids: Array.from(selectedDriverIds),
+          scan_all: false,
+          scan_logs: withLogs
+        })
       });
 
-      if (!response.ok) throw new Error('Failed to save selection');
-      alert(`Выбрано ${selectedDriverIds.size} водителей для мониторинга!`);
+      if (!response.ok) throw new Error('Failed to start scan');
+
+      const data = await response.json();
+      setCurrentScanId(data.scan_id);
+
+      // Track activity
+      const activityId = addScanActivity({
+        type: withLogs ? 'full_scan' : 'smart_analyze',
+        status: 'running',
+        companyId: selectedCompanyId || undefined,
+        companyName: companyName,
+        driverIds: Array.from(selectedDriverIds),
+        driverCount: data.driver_count || selectedDriverIds.size,
+      });
+      setCurrentActivityId(activityId);
+
+      console.log(`Сканирование запущено: ${data.scan_id}`);
     } catch (err) {
       alert('Ошибка: ' + (err instanceof Error ? err.message : 'Unknown error'));
-    } finally {
-      setSaving(false);
+      setScanning(false);
+      setCurrentScanId(null);
+    }
+  };
+
+  const handleLogScanOnly = async () => {
+    if (selectedDriverIds.size === 0 && !selectedCompanyId) {
+      alert('Выберите компанию или водителей для сканирования!');
+      return;
+    }
+
+    const driverCount = selectedDriverIds.size || 'всех';
+    const message = selectedCompanyId
+      ? `Запустить сканирование логов для компании?`
+      : `Запустить сканирование логов для ${driverCount} водителей?`;
+
+    if (!confirm(message)) return;
+
+    // Get company name for activity tracking
+    const selectedCompany = companies.find(c => c.company_id === selectedCompanyId);
+    const companyName = selectedCompany?.company_name;
+
+    try {
+      setScanning(true);
+      setScanWithLogs(true);
+
+      // Создаем специальный endpoint для сканирования только логов
+      const response = await fetch('http://localhost:8000/api/agent/scan-logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          company_id: selectedCompanyId,
+          driver_ids: Array.from(selectedDriverIds),
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to start log scan');
+
+      const data = await response.json();
+      setCurrentScanId(data.scan_id);
+
+      // Track activity
+      const activityId = addScanActivity({
+        type: 'log_scan',
+        status: 'running',
+        companyId: selectedCompanyId || undefined,
+        companyName: companyName,
+        driverIds: Array.from(selectedDriverIds),
+        driverCount: data.driver_count || selectedDriverIds.size,
+      });
+      setCurrentActivityId(activityId);
+
+      console.log(`Сканирование логов запущено: ${data.scan_id}`);
+    } catch (err) {
+      alert('Ошибка: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      setScanning(false);
+      setCurrentScanId(null);
+    }
+  };
+
+  const handleScanComplete = async (success: boolean) => {
+    setScanning(false);
+    setCurrentScanId(null);
+
+    // Update activity status
+    if (currentActivityId) {
+      updateScanActivity(currentActivityId, {
+        status: success ? 'completed' : 'failed',
+        completedAt: new Date().toISOString(),
+        message: success ? 'Сканирование завершено успешно' : 'Сканирование завершено с ошибками',
+      });
+      setCurrentActivityId(null);
+    }
+
+    // Refresh data in all related pages
+    await Promise.all([
+      refreshErrorsByDriver(),
+      refreshErrorStats(),
+      refreshRecentErrors(),
+    ]);
+
+    if (success) {
+      alert('✅ Сканирование успешно завершено!\n\nДанные обновлены. Проверьте вкладку Results для просмотра результатов.');
+    } else {
+      alert('❌ Сканирование завершено с ошибками.\n\nПроверьте логи для деталей.');
     }
   };
 
@@ -153,7 +219,7 @@ export const Control: React.FC = () => {
     try {
       const response = await fetch('http://localhost:8000/api/agent/start', { method: 'POST' });
       if (response.ok) {
-        await fetchAgentConfig();
+        await refreshAgentConfig();
         alert('AI Agent запущен!');
       }
     } catch (error) {
@@ -170,7 +236,7 @@ export const Control: React.FC = () => {
     try {
       const response = await fetch('http://localhost:8000/api/agent/stop', { method: 'POST' });
       if (response.ok) {
-        await fetchAgentConfig();
+        await refreshAgentConfig();
         alert('AI Agent остановлен!');
       }
     } catch (error) {
@@ -187,7 +253,7 @@ export const Control: React.FC = () => {
     try {
       const response = await fetch('http://localhost:8000/api/agent/pause', { method: 'POST' });
       if (response.ok) {
-        await fetchAgentConfig();
+        await refreshAgentConfig();
         alert('AI Agent приостановлен!');
       }
     } catch (error) {
@@ -210,7 +276,7 @@ export const Control: React.FC = () => {
     return 'stopped';
   };
 
-  if (loading) {
+  if (companiesLoading && companies.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
@@ -307,19 +373,57 @@ export const Control: React.FC = () => {
           </Badge>
 
           <Button
-            onClick={handleSaveSelection}
-            disabled={selectedDriverIds.size === 0 || saving}
-            className="bg-cyan-600 hover:bg-cyan-700"
+            onClick={() => handleSmartAnalyze(false)}
+            disabled={scanning || (selectedDriverIds.size === 0 && !selectedCompanyId)}
+            className="bg-purple-600 hover:bg-purple-700"
+            glow={scanning && !scanWithLogs}
           >
-            {saving ? (
+            {scanning && !scanWithLogs ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Сохранение...
+                Анализ...
               </>
             ) : (
               <>
-                <CheckCircle2 className="w-4 h-4 mr-2" />
-                Сохранить
+                <Microscope className="w-4 h-4 mr-2" />
+                Smart Analyze
+              </>
+            )}
+          </Button>
+
+          <Button
+            onClick={() => handleSmartAnalyze(true)}
+            disabled={scanning || (selectedDriverIds.size === 0 && !selectedCompanyId)}
+            className="bg-orange-600 hover:bg-orange-700"
+            glow={scanning && scanWithLogs}
+          >
+            {scanning && scanWithLogs ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Полное сканирование...
+              </>
+            ) : (
+              <>
+                <FileSearch className="w-4 h-4 mr-2" />
+                Полное сканирование
+              </>
+            )}
+          </Button>
+
+          <Button
+            onClick={() => handleLogScanOnly()}
+            disabled={scanning || (selectedDriverIds.size === 0 && !selectedCompanyId)}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            {scanning && scanWithLogs ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Сканирую логи...
+              </>
+            ) : (
+              <>
+                <FileSearch className="w-4 h-4 mr-2" />
+                Только логи
               </>
             )}
           </Button>
@@ -450,20 +554,65 @@ export const Control: React.FC = () => {
         </Card>
       </div>
 
+      {/* Progress Bar */}
+      {currentScanId && scanning && (
+        <ProgressBar scanId={currentScanId} onComplete={handleScanComplete} />
+      )}
+
       {/* Info */}
-      {selectedDriverIds.size === 0 && (
+      {!scanning && selectedDriverIds.size === 0 && (
         <Card className="p-4 bg-yellow-900/20 border-yellow-600">
           <p className="text-yellow-400 text-sm">
-            Выберите водителей и сохраните выбор, затем запустите AI Agent
+            Выберите водителей, затем запустите сканирование или AI Agent
           </p>
         </Card>
       )}
 
-      {selectedDriverIds.size > 0 && agentConfig.state === 'stopped' && (
+      {!scanning && selectedDriverIds.size > 0 && agentConfig.state === 'stopped' && (
         <Card className="p-4 bg-cyan-900/20 border-cyan-500">
           <p className="text-cyan-300 text-sm">
-            <strong>{selectedDriverIds.size} водителей выбрано.</strong> Нажмите "Запустить" чтобы начать мониторинг
+            <strong>{selectedDriverIds.size} водителей выбрано.</strong> Запустите сканирование или нажмите "Запустить" для автоматического мониторинга.
           </p>
+        </Card>
+      )}
+
+      {/* Instructions */}
+      {!scanning && (
+        <Card className="p-5 bg-cyber-800/50 border-cyber-600">
+          <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+            <FileSearch className="w-5 h-5 text-cyan-400" />
+            Типы сканирования
+          </h3>
+          <div className="space-y-3 text-sm text-gray-300">
+            <div className="flex items-start gap-3">
+              <Microscope className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <strong className="text-purple-400">Smart Analyze</strong>
+                <p className="text-gray-400 mt-1">Быстрый анализ через Fortex API (~5-10 сек). Находит ошибки в логах драйверов за последние 7 дней. Результаты сохраняются в БД.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <FileSearch className="w-5 h-5 text-orange-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <strong className="text-orange-400">Полное сканирование</strong>
+                <p className="text-gray-400 mt-1">Smart Analyze + детальное сканирование логов через Playwright (~2-5 мин на драйвера). Открывает UI Fortex, заходит в логи, извлекает полные данные за 9 дней и сохраняет локально в JSON файлы.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <FileSearch className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <strong className="text-blue-400">Только логи</strong>
+                <p className="text-gray-400 mt-1">Сканирование только логов через Playwright (~2-5 мин на драйвера). Открывает UI Fortex, заходит в логи каждого драйвера и сохраняет данные локально в JSON файлы. БЕЗ анализа ошибок.</p>
+              </div>
+            </div>
+            <div className="pt-2 border-t border-cyber-600 flex items-start gap-2">
+              <span className="text-yellow-400 text-base">💡</span>
+              <div>
+                <span className="text-yellow-400 font-semibold">Совет:</span>
+                <span className="text-gray-400 ml-2">Используйте "Smart Analyze" для быстрой проверки ошибок, "Только логи" для просмотра и сохранения данных логов, "Полное сканирование" для комплексного анализа.</span>
+              </div>
+            </div>
+          </div>
         </Card>
       )}
     </div>

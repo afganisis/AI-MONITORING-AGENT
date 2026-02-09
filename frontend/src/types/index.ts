@@ -29,7 +29,10 @@ export type ErrorCategory =
   | 'status_event'
   | 'diagnostic'
   | 'speed'
-  | 'authentication';
+  | 'authentication'
+  | 'uncategorized';
+
+export type FixStrategy = 'obsolete' | 'info_only' | 'ai_repair' | 'custom';
 
 export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
 

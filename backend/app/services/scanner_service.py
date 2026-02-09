@@ -13,6 +13,7 @@ from app.config import get_settings
 from app.database.session import get_db_session
 from app.database.models import Error
 from app.services.progress_tracker import progress_tracker
+from app.services.error_classifier import error_classifier
 
 settings = get_settings()
 
@@ -209,21 +210,42 @@ class ScannerService:
         company_id: str,
         company_name: str = None
     ):
-        """Save errors to database."""
+        """Save errors to database with proper classification."""
         try:
             async with get_db_session() as session:
                 saved_count = 0
+                skipped_count = 0
+
                 for error in errors:
+                    error_message = error.get('message', '') or error.get('name', '')
+
+                    # Use error_classifier for proper classification
+                    classification = error_classifier.classify(error_message)
+
+                    if classification:
+                        # Use classified values
+                        error_key = classification.key
+                        error_name = classification.name
+                        severity = classification.severity.value
+                        category = classification.category.value
+                    else:
+                        # Fallback for unclassified errors
+                        error_key = error.get('type', 'unknown')
+                        error_name = error.get('name', 'Unknown Error')
+                        severity = error.get('severity', 'medium')
+                        category = error.get('category', 'uncategorized')
+                        logger.debug(f"Unclassified error: '{error_message[:50]}...'")
+
                     db_error = Error(
                         driver_id=driver_id,
                         driver_name=driver_name,
                         company_id=company_id,
                         company_name=company_name,
-                        error_key=error.get('type', 'unknown'),
-                        error_name=error.get('name', 'Unknown Error'),
-                        error_message=error.get('message', ''),
-                        severity=error.get('severity', 'medium'),
-                        category=error.get('category', 'uncategorized'),
+                        error_key=error_key,
+                        error_name=error_name,
+                        error_message=error_message,
+                        severity=severity,
+                        category=category,
                         status='pending',
                         error_metadata=error
                     )
@@ -232,6 +254,8 @@ class ScannerService:
 
                 await session.commit()
                 logger.info(f"Saved {saved_count} errors to database: driver={driver_id[:8]}, company={company_id}, driver_name={driver_name}, company_name={company_name}")
+                if skipped_count > 0:
+                    logger.warning(f"Skipped {skipped_count} unclassified errors")
 
         except Exception as e:
             logger.exception(f"Failed to save errors to database: {e}")

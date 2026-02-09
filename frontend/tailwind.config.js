@@ -119,6 +119,7 @@ export default {
         'float': 'float 6s ease-in-out infinite',
         'spin-slow': 'spin 8s linear infinite',
         'shine': 'shine 3s infinite',
+        'shimmer': 'shimmer 2s infinite',
       },
       keyframes: {
         pulseNeon: {
@@ -152,6 +153,10 @@ export default {
         shine: {
           '0%': { transform: 'translateX(-100%) skewX(-12deg)' },
           '100%': { transform: 'translateX(200%) skewX(-12deg)' },
+        },
+        shimmer: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(100%)' },
         },
       },
       fontFamily: {
