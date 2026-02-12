@@ -78,6 +78,13 @@ async def startup_event():
     # It must be started manually via /api/agent/start endpoint
     logger.info("Agent service initialized (not started)")
 
+    # Start Telegram bot
+    try:
+        from app.telegram.bot_service import telegram_bot
+        await telegram_bot.start()
+    except Exception as e:
+        logger.warning(f"Telegram bot failed to start: {e}")
+
     logger.info("API is ready!")
 
 
@@ -85,6 +92,13 @@ async def startup_event():
 async def shutdown_event():
     """Cleanup on shutdown."""
     logger.info("Shutting down ZeroELD AI Agent API...")
+
+    # Stop Telegram bot
+    try:
+        from app.telegram.bot_service import telegram_bot
+        await telegram_bot.stop()
+    except Exception as e:
+        logger.warning(f"Telegram bot shutdown error: {e}")
 
     # Stop agent service if running
     if agent_service.is_running:

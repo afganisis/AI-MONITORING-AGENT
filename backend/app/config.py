@@ -52,6 +52,11 @@ class Settings(BaseSettings):
     agent_require_approval: bool = True
     agent_dry_run_mode: bool = True
 
+    # Telegram Bot
+    tg_bot: str = ""
+    tg_group_input: int = -1002174217730   # MONITORING LOGBOOK / AFTER FIX
+    tg_group_output: int = -5137026881     # MONITORING PTHORA AI
+
     # CORS
     cors_origins: str = "http://localhost:3000"
 

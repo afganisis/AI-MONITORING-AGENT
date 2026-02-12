@@ -32,6 +32,9 @@ python-dateutil>=2.8.2
 # WebSocket
 websockets>=12.0
 
+# Telegram Bot
+python-telegram-bot>=21.0
+
 # Event loop optimization for Windows (optional)
 winloop>=0.1.0; sys_platform == 'win32'
 

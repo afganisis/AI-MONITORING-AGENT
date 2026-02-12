@@ -35,6 +35,12 @@ class FixStrategy(str, Enum):
     CUSTOM = "custom"           # Requires custom fix logic from PTHORA AI
 
 
+# Error keys hidden from Telegram output (still tracked internally)
+HIDDEN_FROM_DISPLAY = {
+    "sequentialIdBreak",
+}
+
+
 @dataclass
 class ErrorFilter:
     """Represents an error filter for classification."""
@@ -220,6 +226,42 @@ ERROR_FILTERS: List[ErrorFilter] = [
         category=ErrorCategory.SPEED,
         severity=ErrorSeverity.MEDIUM,
         fix_strategy=FixStrategy.CUSTOM
+    ),
+
+    # ========================================================================
+    # HOS VIOLATIONS - From Smart Analyze API
+    # ========================================================================
+    ErrorFilter(
+        name="14 HOURS VIOLATION",
+        key="hosViolation14Hour",
+        match=lambda msg: msg and "14 HOURS VIOLATION" in msg.strip().upper(),
+        category=ErrorCategory.STATUS_EVENT,
+        severity=ErrorSeverity.HIGH,
+        fix_strategy=FixStrategy.INFO_ONLY
+    ),
+    ErrorFilter(
+        name="11 HOURS VIOLATION",
+        key="hosViolation11Hour",
+        match=lambda msg: msg and "11 HOURS VIOLATION" in msg.strip().upper(),
+        category=ErrorCategory.STATUS_EVENT,
+        severity=ErrorSeverity.HIGH,
+        fix_strategy=FixStrategy.INFO_ONLY
+    ),
+    ErrorFilter(
+        name="8 HOURS VIOLATION",
+        key="hosViolation8Hour",
+        match=lambda msg: msg and "8 HOURS VIOLATION" in msg.strip().upper(),
+        category=ErrorCategory.STATUS_EVENT,
+        severity=ErrorSeverity.HIGH,
+        fix_strategy=FixStrategy.INFO_ONLY
+    ),
+    ErrorFilter(
+        name="70 HOURS VIOLATION",
+        key="hosViolation70Hour",
+        match=lambda msg: msg and "70 HOURS VIOLATION" in msg.strip().upper(),
+        category=ErrorCategory.STATUS_EVENT,
+        severity=ErrorSeverity.CRITICAL,
+        fix_strategy=FixStrategy.INFO_ONLY
     ),
 
     # ========================================================================
