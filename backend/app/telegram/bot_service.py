@@ -33,7 +33,6 @@ class TelegramBotService:
         self._task: Optional[asyncio.Task] = None
         self._bot: Optional[Bot] = None
         self._running = False
-        self._started_at: float = 0
 
     async def start(self) -> None:
         """Start Telegram bot polling in background."""
@@ -57,7 +56,6 @@ class TelegramBotService:
             await self._app.initialize()
             await self._app.start()
 
-            self._started_at = time.time()
             self._running = True
             self._task = asyncio.create_task(self._poll_loop())
 
@@ -74,7 +72,7 @@ class TelegramBotService:
             try:
                 updater = self._app.updater
                 await updater.start_polling(
-                    drop_pending_updates=True,
+                    drop_pending_updates=False,
                     allowed_updates=["message"],
                 )
                 while self._running:
@@ -181,10 +179,6 @@ class TelegramBotService:
         """Handle incoming message from input group."""
         message = update.effective_message
         if not message or not message.text:
-            return
-
-        # Skip old messages (before bot start)
-        if message.date and message.date.timestamp() < self._started_at:
             return
 
         chat_id = message.chat_id
